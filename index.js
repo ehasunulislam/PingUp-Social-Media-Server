@@ -33,6 +33,17 @@ async function run() {
     /* collection connect end */
 
     /* story collection start */
+    // ==================== GET: For taking all the Stories ====================
+    app.get("/all-stories", async(req, res) => {
+      try{
+        const story = await storyCollections.find().sort({createdAt: -1 }).toArray();
+        res.send(story);
+      }
+      catch(err) {
+        res.status(500).send({message: "Failed to fetch stories", error: err.message});
+      }
+    })
+
     // ==================== POST: Create a new story ====================
     app.post("/stories/upload", async(req, res) => {
       const {email, dayPic} = req.body;
