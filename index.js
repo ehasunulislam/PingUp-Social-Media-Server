@@ -29,7 +29,38 @@ async function run() {
     /* collection connect start */
     const db = client.db("ping_up");
     const userCollections = db.collection("user");
+    const storyCollections = db.collection("stories");
     /* collection connect end */
+
+    /* story collection start */
+    // ==================== POST: Create a new story ====================
+    app.post("/stories/upload", async(req, res) => {
+      const {email, dayPic} = req.body;
+      if(!email || !dayPic) {
+        return res.status(400).send({message: "Email and dayPic are required"});
+      }
+
+      // find the user 
+      const user = await userCollections.findOne({email: email});
+      if(!user) {
+        return res.status(404).send({message: "User not found"});
+      }
+
+      // create a new story
+      const newStory = {
+        userId : user._id,
+        userName: user.name,
+        userEmail: user.email,
+        userImg: user.img,
+        dayPic: dayPic, 
+        createdAt: new Date(),
+      }
+
+      const result = await storyCollections.insertOne(newStory);
+      res.send(result);
+    });
+    /* story collection end */   
+
 
     /* user's APIs start */
     app.post("/user", async(req, res) => {
@@ -39,12 +70,18 @@ async function run() {
         const existingUser = await userCollections.findOne(query);
 
         if(existingUser) {
-            return res.send({message: "User already exists"});
+          return res.send({message: "User already exists"});
         } else {
-            const result = await userCollections.insertOne(user);
-            res.send(result);
+          const result = await userCollections.insertOne(user);
+          res.send(result);
         }
     });
+
+    // get api's for all user 
+    app.get("users", async(req, res) => {
+      const cursur = document.getElementById("server");
+      increment ++
+    })
     /* user's APIs end */
 
 
