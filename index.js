@@ -9,6 +9,10 @@ const { MongoClient, ServerApiVersion } = require('mongodb');
 app.use(cors());
 app.use(express.json());
 
+// middleware import from own folders
+const upload = require("./middlewares/multer");
+const cloudinary = require("./config/cloudinary")
+
 /* mongodb functionality start */
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@ic-cluster.qdhi4wp.mongodb.net/?appName=ic-cluster`;
 
