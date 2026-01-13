@@ -30,10 +30,11 @@ async function run() {
     const db = client.db("ping_up");
     const userCollections = db.collection("user");
     const storyCollections = db.collection("stories");
+    const createPostCollections = db.collection("create-post");
     /* collection connect end */
 
-    /* story collection start */
-    // ==================== GET: For taking all the Stories ====================
+    /* story API's start */
+    //  GET: For taking all the Stories 
     app.get("/all-stories", async(req, res) => {
       try{
         const story = await storyCollections.find().sort({createdAt: -1 }).toArray();
@@ -44,7 +45,7 @@ async function run() {
       }
     })
 
-    // ==================== POST: Create a new story ====================
+    //  POST: Create a new story with Image
     app.post("/stories/upload", async(req, res) => {
       const {email, dayPic} = req.body;
       if(!email || !dayPic) {
@@ -70,7 +71,7 @@ async function run() {
       const result = await storyCollections.insertOne(newStory);
       res.send(result);
     });
-    /* story collection end */   
+    /* story API's end */   
 
 
     /* user's APIs start */
@@ -87,12 +88,6 @@ async function run() {
           res.send(result);
         }
     });
-
-    // get api's for all user 
-    app.get("users", async(req, res) => {
-      const cursur = document.getElementById("server");
-      increment ++
-    })
     /* user's APIs end */
 
 
