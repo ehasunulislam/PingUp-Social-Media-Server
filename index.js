@@ -41,10 +41,7 @@ async function run() {
     //  GET: For taking all the Stories
     app.get("/all-stories", async (req, res) => {
       try {
-        const story = await storyCollections
-          .find()
-          .sort({ createdAt: -1 })
-          .toArray();
+        const story = await storyCollections.find().sort({ createdAt: -1 }).toArray();
         res.send(story);
       } catch (err) {
         res
@@ -84,6 +81,7 @@ async function run() {
     /* story API's end */
 
     /* user's APIs start */
+    // ------------- POST: for user create -------------
     app.post("/user", async (req, res) => {
       const user = req.body;
       const email = req.body.email;
@@ -100,6 +98,18 @@ async function run() {
     /* user's APIs end */
 
     /* create-post API's start */
+    // ------------- GET: for all-post -------------
+    app.get("/all-posts", async(req, res) => {
+      try{
+        const result = await createPostCollections.find().sort({ createdAt: -1 }).toArray();
+        res.send(result);
+      }
+      catch(err) {
+        res.status(500).send({message: err.message})
+      }
+    })
+
+    // ------------- POST: for create-post -------------
     app.post("/create-post", upload.array("images"), async (req, res) => {
       try {
         const { text, email } = req.body;
