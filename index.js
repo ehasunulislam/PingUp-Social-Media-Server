@@ -294,6 +294,25 @@ async function run() {
     /* Feeds Love API's end */
 
     /* Feeds Comment API's start */
+    // ------------- GET: for All Comments by Single User by ID -------------
+    app.get("/feeds-comments/:postId", async (req, res) => {
+      try {
+        const { postId } = req.params;
+
+        if (!ObjectId.isValid(postId)) {
+          return res.status(400).send({ message: "Invalid postId" });
+        }
+
+        const postObjectId = new ObjectId(postId);
+
+        const result = await FeedsCommentsCollections.find({postId: postObjectId}).sort({createdAt: -1}).toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+    // ------------- POST: for feeds-comments -------------
     app.post("/feeds-comments", async (req, res) => {
       try {
         const { postId, text, userEmail } = req.body;
@@ -335,7 +354,6 @@ async function run() {
         res.status(500).send({ message: err.message });
       }
     });
-
     /* Feeds Comment API's end */
 
     // Send a ping to confirm a successful connection
