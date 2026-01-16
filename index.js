@@ -36,6 +36,7 @@ async function run() {
     const storyCollections = db.collection("stories");
     const createPostCollections = db.collection("create-post");
     const FeedsLovesCollections = db.collection("feeds-love");
+    const FeedsCommentsCollections = db.collection("feeds-comments");
     /* collection connect end */
 
     /* story API's start */
@@ -105,11 +106,28 @@ async function run() {
     // ------------- GET: for all-post -------------
     app.get("/all-posts", async (req, res) => {
       try {
-        const result = await createPostCollections
+        const posts = await createPostCollections
           .find()
           .sort({ createdAt: -1 })
           .toArray();
-        res.send(result);
+
+        const updatedPosts = await Promise.all(
+          posts.map(async (post) => {
+            const commentCount = await FeedsCommentsCollections.countDocuments({
+              postId: post._id,
+            });
+
+            const loveCount = post.loveCount || 0;
+
+            return {
+              ...post,
+              commentCount,
+              loveCount,
+            };
+          })
+        );
+
+        res.send(updatedPosts);
       } catch (err) {
         res.status(500).send({ message: err.message });
       }
@@ -171,26 +189,26 @@ async function run() {
 
     /* Feeds Love API's start */
     // ------------- GET: love count + is current user loved this post or not
-    app.get("/feeds-love/:loveId", async(req, res) => {
-      try{
-        const {loveId} = req.params;
-        const {userEmail} = req.query;
+    app.get("/feeds-love/:loveId", async (req, res) => {
+      try {
+        const { loveId } = req.params;
+        const { userEmail } = req.query;
 
         const post = await createPostCollections.findOne({
           _id: new ObjectId(loveId),
         });
 
-        if(!post) {
-          return res.status(404).send({message: "post not found"});
+        if (!post) {
+          return res.status(404).send({ message: "post not found" });
         }
 
         const loveCount = post.loveCount || 0;
 
         let isLoved = false;
-        if(userEmail) {
-          const user = await userCollections.findOne({email: userEmail});
+        if (userEmail) {
+          const user = await userCollections.findOne({ email: userEmail });
 
-          if(user) {
+          if (user) {
             const loved = await FeedsLovesCollections.findOne({
               loveId: new ObjectId(loveId),
               userId: user._id,
@@ -198,14 +216,12 @@ async function run() {
             isLoved = !!loved;
           }
 
-          res.send({loveCount, isLoved});
+          res.send({ loveCount, isLoved });
         }
-      }
-      catch(err) {
-        res.status(500).send({message: err.message})
+      } catch (err) {
+        res.status(500).send({ message: err.message });
       }
     });
-
 
     // ------------- POST: for feeds-love -------------
     app.post("/feeds-love", async (req, res) => {
@@ -240,7 +256,11 @@ async function run() {
             { _id: new ObjectId(loveId) },
             { $inc: { loveCount: -1 } }
           );
-          return res.send({message: "Unloved", action: "unlike", loveCount: -1});
+          return res.send({
+            message: "Unloved",
+            action: "unlike",
+            loveCount: -1,
+          });
         } else {
           // create a new love
           const newLove = {
@@ -256,22 +276,67 @@ async function run() {
 
           // love count increment
           const updatePost = await createPostCollections.findOneAndUpdate(
-            {_id: new ObjectId(loveId)},
-            {$inc: {loveCount: 1}},
-            {returnDocument: "after", upsert: false}
+            { _id: new ObjectId(loveId) },
+            { $inc: { loveCount: 1 } },
+            { returnDocument: "after", upsert: false }
           );
 
           return res.send({
             message: "loved",
             action: "like",
             loveCount: updatePost?.loveCount || 1,
-          })
+          });
         }
       } catch (err) {
         res.status(500).send({ message: "Internal server error" });
       }
     });
     /* Feeds Love API's end */
+
+    /* Feeds Comment API's start */
+    app.post("/feeds-comments", async (req, res) => {
+      try {
+        const { postId, text, userEmail } = req.body;
+
+        if (!postId || !text || !userEmail) {
+          return res.status(400).send({
+            message: "postId, text, userEmail are required",
+          });
+        }
+
+        const postObjectId = new ObjectId(postId);
+
+        const user = await userCollections.findOne({ email: userEmail });
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        const newComment = {
+          postId: postObjectId,
+          text,
+          userId: user._id,
+          userName: user.name,
+          userEmail: user.email,
+          userImg: user.img || null,
+          createdAt: new Date(),
+        };
+
+        await FeedsCommentsCollections.insertOne(newComment);
+
+        const commentCount = await FeedsCommentsCollections.countDocuments({
+          postId: postObjectId,
+        });
+
+        res.send({
+          message: "Comment added successfully",
+          commentCount,
+        });
+      } catch (err) {
+        res.status(500).send({ message: err.message });
+      }
+    });
+
+    /* Feeds Comment API's end */
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
