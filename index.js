@@ -86,6 +86,40 @@ async function run() {
     /* story API's end */
 
     /* user's APIs start */
+    // ------------- GET: for Single user information with ID
+    app.get("/user/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { uid: id };
+
+        const result = await userCollections.findOne(query);
+
+        if (!result) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
+    // ------------- GET: for Single user information with Email
+    app.get("/user/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const result = await userCollections.findOne({ email });
+
+        if (!result) {
+          return res.send({});
+        }
+
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
+
     // ------------- POST: for user create -------------
     app.post("/user", async (req, res) => {
       const user = req.body;
@@ -305,7 +339,11 @@ async function run() {
 
         const postObjectId = new ObjectId(postId);
 
-        const result = await FeedsCommentsCollections.find({postId: postObjectId}).sort({createdAt: -1}).toArray();
+        const result = await FeedsCommentsCollections.find({
+          postId: postObjectId,
+        })
+          .sort({ createdAt: -1 })
+          .toArray();
         res.send(result);
       } catch (err) {
         res.status(500).send({ message: "Internal server error" });
