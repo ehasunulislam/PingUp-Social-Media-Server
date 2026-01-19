@@ -37,6 +37,7 @@ async function run() {
     const createPostCollections = db.collection("create-post");
     const FeedsLovesCollections = db.collection("feeds-love");
     const FeedsCommentsCollections = db.collection("feeds-comments");
+    const EditProfileCollections = db.collection("edit-profile");
     /* collection connect end */
 
     /* story API's start */
@@ -393,6 +394,18 @@ async function run() {
       }
     });
     /* Feeds Comment API's end */
+
+
+    /* Edit-Profile API's Start */
+    app.post("/edit-profile", async(req, res) => {
+      try{
+
+      }
+      catch(err) {
+        res.status(500).send({message: "Internal Server Error"})
+      }
+    })
+    /* Edit-Profile API's end */
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
