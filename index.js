@@ -37,7 +37,6 @@ async function run() {
     const createPostCollections = db.collection("create-post");
     const FeedsLovesCollections = db.collection("feeds-love");
     const FeedsCommentsCollections = db.collection("feeds-comments");
-    const EditProfileCollections = db.collection("edit-profile");
     /* collection connect end */
 
     /* story API's start */
@@ -106,20 +105,20 @@ async function run() {
     });
 
     // ------------- GET: for Single user information with Email
-    app.get("/user/:email", async (req, res) => {
-      try {
-        const email = req.params.email;
-        const result = await userCollections.findOne({ email });
+    // app.get("/user/:email", async (req, res) => {
+    //   try {
+    //     const email = req.params.email;
+    //     const result = await userCollections.findOne({ email });
 
-        if (!result) {
-          return res.send({});
-        }
+    //     if (!result) {
+    //       return res.send({});
+    //     }
 
-        res.send(result);
-      } catch (err) {
-        res.status(500).send({ message: "Internal Server Error" });
-      }
-    });
+    //     res.send(result);
+    //   } catch (err) {
+    //     res.status(500).send({ message: "Internal Server Error" });
+    //   }
+    // });
 
     // ------------- POST: for user create -------------
     app.post("/user", async (req, res) => {
@@ -133,6 +132,36 @@ async function run() {
       } else {
         const result = await userCollections.insertOne(user);
         res.send(result);
+      }
+    });
+
+    // ------------- PATCH: for user update -------------
+    app.patch("/update-user", async(req, res) => {
+      try{
+        const { email, ...editedData } = req.body;
+
+        if (!email) {
+          return res.status(400).send({ message: "Email required" });
+        }
+
+        const result = await userCollections.updateOne(
+          {email: email},
+          {
+            $set: {
+              ...editedData,
+              updateDate: new Date(),
+            },
+          }
+        )
+
+        if(result.matchedCount === 0) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send({success: true, result})
+      }
+      catch(err) {
+        res.status(500).send({ message: "Internal Server Error" });
       }
     });
     /* user's APIs end */
