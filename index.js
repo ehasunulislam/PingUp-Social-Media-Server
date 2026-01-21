@@ -167,13 +167,46 @@ async function run() {
     /* user's APIs end */
 
     /* create-post API's start */
+    // ------------- GET: for all-post(with user's uid) -------------
+    app.get("/getAll-posts/:id", async(req, res) => {
+      try{
+        const uid = req.params.id;
+
+        const user = await userCollections.findOne({uid});       
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        const posts = await createPostCollections.find({userId: user._id}).sort({createdAt: -1}).toArray();
+
+        // commentCount and loveCount
+        const updatedPosts = await Promise.all(
+          posts.map(async (post) => {
+            const commentCount = await FeedsCommentsCollections.countDocuments({
+              postId: post._id,
+            });
+
+            const loveCount = post.loveCount || 0;
+
+            return {
+              ...post,
+              commentCount,
+              loveCount,
+            }
+          })
+        );
+
+        res.send(updatedPosts)
+      }
+      catch(err) {
+        res.status(500).send({message: "Internal server error"})
+      }
+    });
+
     // ------------- GET: for all-post -------------
     app.get("/all-posts", async (req, res) => {
       try {
-        const posts = await createPostCollections
-          .find()
-          .sort({ createdAt: -1 })
-          .toArray();
+        const posts = await createPostCollections.find().sort({ createdAt: -1 }).toArray();
 
         const updatedPosts = await Promise.all(
           posts.map(async (post) => {
