@@ -86,7 +86,7 @@ async function run() {
     /* story API's end */
 
     /* user's APIs start */
-    // ------------- GET: for Single user information with ID
+    // ------------- GET: for Single user information with ID -------------
     app.get("/user/:id", async (req, res) => {
       try {
         const id = req.params.id;
@@ -104,21 +104,27 @@ async function run() {
       }
     });
 
-    // ------------- GET: for Single user information with Email
-    // app.get("/user/:email", async (req, res) => {
-    //   try {
-    //     const email = req.params.email;
-    //     const result = await userCollections.findOne({ email });
+    // ------------- GET: for all-user information -------------
+    app.get("/all-user", async (req, res) => {
+      try {
+        const search = req.query.search || "";
+        let query = {};
 
-    //     if (!result) {
-    //       return res.send({});
-    //     }
+        if (search) {
+          query = {
+            $or: [
+              {name: {$regex: search, $options: "i"}}
+            ]
+          };
+        }
 
-    //     res.send(result);
-    //   } catch (err) {
-    //     res.status(500).send({ message: "Internal Server Error" });
-    //   }
-    // });
+        const cursor = userCollections.find(query).sort({ createdAt: -1 });
+        const result = await cursor.toArray();
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
 
     // ------------- POST: for user create -------------
     app.post("/user", async (req, res) => {
@@ -136,8 +142,8 @@ async function run() {
     });
 
     // ------------- PATCH: for user update -------------
-    app.patch("/update-user", async(req, res) => {
-      try{
+    app.patch("/update-user", async (req, res) => {
+      try {
         const { email, ...editedData } = req.body;
 
         if (!email) {
@@ -145,22 +151,21 @@ async function run() {
         }
 
         const result = await userCollections.updateOne(
-          {email: email},
+          { email: email },
           {
             $set: {
               ...editedData,
               updateDate: new Date(),
             },
           }
-        )
+        );
 
-        if(result.matchedCount === 0) {
+        if (result.matchedCount === 0) {
           return res.status(404).send({ message: "User not found" });
         }
 
-        res.send({success: true, result})
-      }
-      catch(err) {
+        res.send({ success: true, result });
+      } catch (err) {
         res.status(500).send({ message: "Internal Server Error" });
       }
     });
@@ -168,16 +173,19 @@ async function run() {
 
     /* create-post API's start */
     // ------------- GET: for all-post(with user's uid) -------------
-    app.get("/getAll-posts/:id", async(req, res) => {
-      try{
+    app.get("/getAll-posts/:id", async (req, res) => {
+      try {
         const uid = req.params.id;
 
-        const user = await userCollections.findOne({uid});       
+        const user = await userCollections.findOne({ uid });
         if (!user) {
           return res.status(404).send({ message: "User not found" });
         }
 
-        const posts = await createPostCollections.find({userId: user._id}).sort({createdAt: -1}).toArray();
+        const posts = await createPostCollections
+          .find({ userId: user._id })
+          .sort({ createdAt: -1 })
+          .toArray();
 
         // commentCount and loveCount
         const updatedPosts = await Promise.all(
@@ -192,21 +200,23 @@ async function run() {
               ...post,
               commentCount,
               loveCount,
-            }
+            };
           })
         );
 
-        res.send(updatedPosts)
-      }
-      catch(err) {
-        res.status(500).send({message: "Internal server error"})
+        res.send(updatedPosts);
+      } catch (err) {
+        res.status(500).send({ message: "Internal server error" });
       }
     });
 
     // ------------- GET: for all-post -------------
     app.get("/all-posts", async (req, res) => {
       try {
-        const posts = await createPostCollections.find().sort({ createdAt: -1 }).toArray();
+        const posts = await createPostCollections
+          .find()
+          .sort({ createdAt: -1 })
+          .toArray();
 
         const updatedPosts = await Promise.all(
           posts.map(async (post) => {
@@ -457,16 +467,13 @@ async function run() {
     });
     /* Feeds Comment API's end */
 
-
     /* Edit-Profile API's Start */
-    app.post("/edit-profile", async(req, res) => {
-      try{
-
+    app.post("/edit-profile", async (req, res) => {
+      try {
+      } catch (err) {
+        res.status(500).send({ message: "Internal Server Error" });
       }
-      catch(err) {
-        res.status(500).send({message: "Internal Server Error"})
-      }
-    })
+    });
     /* Edit-Profile API's end */
 
     // Send a ping to confirm a successful connection
