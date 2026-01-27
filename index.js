@@ -113,9 +113,7 @@ async function run() {
 
         if (search) {
           query = {
-            $or: [
-              {name: {$regex: search, $options: "i"}}
-            ]
+            $or: [{ name: { $regex: search, $options: "i" } }],
           };
         }
 
@@ -158,7 +156,7 @@ async function run() {
               ...editedData,
               updateDate: new Date(),
             },
-          }
+          },
         );
 
         if (result.matchedCount === 0) {
@@ -202,7 +200,7 @@ async function run() {
               commentCount,
               loveCount,
             };
-          })
+          }),
         );
 
         res.send(updatedPosts);
@@ -232,7 +230,7 @@ async function run() {
               commentCount,
               loveCount,
             };
-          })
+          }),
         );
 
         res.send(updatedPosts);
@@ -267,7 +265,7 @@ async function run() {
               `data:${file.mimetype};base64,${base64}`,
               {
                 folder: "create-post",
-              }
+              },
             );
 
             imageUrls.push(result.secure_url);
@@ -362,7 +360,7 @@ async function run() {
           // decrement love count
           await createPostCollections.updateOne(
             { _id: new ObjectId(loveId) },
-            { $inc: { loveCount: -1 } }
+            { $inc: { loveCount: -1 } },
           );
           return res.send({
             message: "Unloved",
@@ -386,7 +384,7 @@ async function run() {
           const updatePost = await createPostCollections.findOneAndUpdate(
             { _id: new ObjectId(loveId) },
             { $inc: { loveCount: 1 } },
-            { returnDocument: "after", upsert: false }
+            { returnDocument: "after", upsert: false },
           );
 
           return res.send({
@@ -468,15 +466,112 @@ async function run() {
     });
     /* Feeds Comment API's end */
 
-
     /* Friend Request's API's start */
-    // POST: for send friend request
-    app.post("/friend-request/send", async(req, res) => {
-      
+    // GET: for showing status when user frontend page reload it's show the real status
+    app.get("/friend-request/status", async(req, res) => {
+      try{
+        const { senderEmail, receiverEmail } = req.query;
+
+        const sender = await userCollections.findOne({ email: senderEmail });
+        const receiver = await userCollections.findOne({email: receiverEmail});
+
+        if (!sender || !receiver) {
+          return res.send("none");
+        }
+
+        const request = await FriendRequestCollections.findOne({
+          $or: [
+            { senderId: sender._id, receiverId: receiver._id },
+            { senderId: receiver._id, receiverId: sender._id },
+          ]
+        });
+
+        if (!request) {
+          return res.send({ status: "none" });
+        }
+
+        res.send({ status: request.status });
+      }
+      catch(err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
     })
+
+    // POST: for send friend request
+    app.post("/friend-request/send", async (req, res) => {
+      try {
+        const { senderEmail, receiverEmail } = req.body;
+
+        const sender = await userCollections.findOne({ email: senderEmail });
+        const receiver = await userCollections.findOne({email: receiverEmail});
+
+        if (!sender || !receiver) {
+          return res.status(404).send("user not found");
+        }
+
+        const exist = await FriendRequestCollections.findOne({
+          senderId: sender._id,
+          receiverId: receiver._id,
+        });
+
+        if (exist) {
+          return res.send({ message: "Already requested" });
+        }
+
+        const request = {
+          senderId: sender._id,
+          receiverId: receiver._id,
+          senderEmail: sender.email,
+          receiverEmail: receiver.email,
+          status: "pending",
+          createdAt: new Date(),
+        };
+
+        const result = await FriendRequestCollections.insertOne(request);
+
+        res.send({
+          message: "Request sent",
+          status: "pending",
+        });
+      } catch (err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+
+    // delete: for friend-request cancel
+    app.delete("/friend-request/cancel", async(req, res) => {
+      try{
+        const { senderEmail, receiverEmail } = req.body;
+
+        const sender = await userCollections.findOne({ email: senderEmail });
+        const receiver = await userCollections.findOne({email: receiverEmail});
+
+        if (!sender || !receiver) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        const result = await FriendRequestCollections.deleteOne({
+          senderId: sender._id,
+          receiverId: receiver._id,
+          status: "pending",
+        });
+
+        if (result.deletedCount === 0) {
+          return res.send({ message: "No pending request found" });
+        }
+
+        res.send({
+          message: "Request cancelled",
+          status: "none",
+        });
+      }
+      catch (err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    })
+
     /* Friend Request's API's end */
-
-
 
     /* Edit-Profile API's Start */
     // app.post("/edit-profile", async (req, res) => {
@@ -490,7 +585,7 @@ async function run() {
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
     console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
+      "Pinged your deployment. You successfully connected to MongoDB!",
     );
   } finally {
     // Ensures that the client will close when you finish/error
