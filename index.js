@@ -37,6 +37,7 @@ async function run() {
     const createPostCollections = db.collection("create-post");
     const FeedsLovesCollections = db.collection("feeds-love");
     const FeedsCommentsCollections = db.collection("feeds-comments");
+    const FriendRequestCollections = db.collection("friends_request");
     /* collection connect end */
 
     /* story API's start */
@@ -467,13 +468,23 @@ async function run() {
     });
     /* Feeds Comment API's end */
 
+
+    /* Friend Request's API's start */
+    // POST: for send friend request
+    app.post("/friend-request/send", async(req, res) => {
+      
+    })
+    /* Friend Request's API's end */
+
+
+
     /* Edit-Profile API's Start */
-    app.post("/edit-profile", async (req, res) => {
-      try {
-      } catch (err) {
-        res.status(500).send({ message: "Internal Server Error" });
-      }
-    });
+    // app.post("/edit-profile", async (req, res) => {
+    //   try {
+    //   } catch (err) {
+    //     res.status(500).send({ message: "Internal Server Error" });
+    //   }
+    // });
     /* Edit-Profile API's end */
 
     // Send a ping to confirm a successful connection
