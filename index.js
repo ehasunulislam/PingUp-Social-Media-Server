@@ -521,7 +521,9 @@ async function run() {
         const request = {
           senderId: sender._id,
           receiverId: receiver._id,
+          senderName: sender.name,
           senderEmail: sender.email,
+          receiverName: receiver.name,
           receiverEmail: receiver.email,
           status: "pending",
           createdAt: new Date(),
