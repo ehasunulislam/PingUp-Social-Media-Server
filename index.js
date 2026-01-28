@@ -467,6 +467,33 @@ async function run() {
     /* Feeds Comment API's end */
 
     /* Friend Request's API's start */
+    // GET: for showing all which user give you friend-request 
+    app.get("/friends-request/incoming", async(req, res) => {
+      try{
+        const { email } = req.query;
+
+        if(!email) {
+          res.status(400).send({message: "email is required"});
+        }
+
+        const user = await userCollections.findOne({ email });
+
+        if(!user) {
+          res.status(400).send({message: "user not define"});
+        }
+
+        const result = await FriendRequestCollections.find({
+          receiverId: user._id,
+          status: "pending"
+        }).sort({ createdAt: -1 }).toArray();
+
+        res.send(result);
+      }
+      catch(err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    })
+
     // GET: for showing status when user frontend page reload it's show the real status
     app.get("/friend-request/status", async(req, res) => {
       try{
@@ -495,7 +522,8 @@ async function run() {
       catch(err) {
         res.status(500).send({ message: "Internal server error" });
       }
-    })
+    });
+
 
     // POST: for send friend request
     app.post("/friend-request/send", async (req, res) => {
@@ -523,8 +551,10 @@ async function run() {
           receiverId: receiver._id,
           senderName: sender.name,
           senderEmail: sender.email,
+          senderImg: sender.img,
           receiverName: receiver.name,
           receiverEmail: receiver.email,
+          receiverImg: receiver.img,
           status: "pending",
           createdAt: new Date(),
         };
