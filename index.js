@@ -467,40 +467,43 @@ async function run() {
     /* Feeds Comment API's end */
 
     /* Friend Request's API's start */
-    // GET: for showing all which user give you friend-request 
-    app.get("/friends-request/incoming", async(req, res) => {
-      try{
+    // GET: for showing all which user give you friend-request
+    app.get("/friends-request/incoming", async (req, res) => {
+      try {
         const { email } = req.query;
 
-        if(!email) {
-          res.status(400).send({message: "email is required"});
+        if (!email) {
+          res.status(400).send({ message: "email is required" });
         }
 
         const user = await userCollections.findOne({ email });
 
-        if(!user) {
-          res.status(400).send({message: "user not define"});
+        if (!user) {
+          res.status(400).send({ message: "user not define" });
         }
 
         const result = await FriendRequestCollections.find({
           receiverId: user._id,
-          status: "pending"
-        }).sort({ createdAt: -1 }).toArray();
+          status: "pending",
+        })
+          .sort({ createdAt: -1 })
+          .toArray();
 
         res.send(result);
-      }
-      catch(err) {
+      } catch (err) {
         res.status(500).send({ message: "Internal server error" });
       }
-    })
+    });
 
     // GET: for showing status when user frontend page reload it's show the real status
-    app.get("/friend-request/status", async(req, res) => {
-      try{
+    app.get("/friend-request/status", async (req, res) => {
+      try {
         const { senderEmail, receiverEmail } = req.query;
 
         const sender = await userCollections.findOne({ email: senderEmail });
-        const receiver = await userCollections.findOne({email: receiverEmail});
+        const receiver = await userCollections.findOne({
+          email: receiverEmail,
+        });
 
         if (!sender || !receiver) {
           return res.send("none");
@@ -510,7 +513,7 @@ async function run() {
           $or: [
             { senderId: sender._id, receiverId: receiver._id },
             { senderId: receiver._id, receiverId: sender._id },
-          ]
+          ],
         });
 
         if (!request) {
@@ -518,12 +521,10 @@ async function run() {
         }
 
         res.send({ status: request.status });
-      }
-      catch(err) {
+      } catch (err) {
         res.status(500).send({ message: "Internal server error" });
       }
     });
-
 
     // POST: for send friend request
     app.post("/friend-request/send", async (req, res) => {
@@ -531,7 +532,9 @@ async function run() {
         const { senderEmail, receiverEmail } = req.body;
 
         const sender = await userCollections.findOne({ email: senderEmail });
-        const receiver = await userCollections.findOne({email: receiverEmail});
+        const receiver = await userCollections.findOne({
+          email: receiverEmail,
+        });
 
         if (!sender || !receiver) {
           return res.status(404).send("user not found");
@@ -570,14 +573,82 @@ async function run() {
       }
     });
 
+    // PATCH: for user accept friend request
+    app.patch("/friend-request/accepted", async (req, res) => {
+      try {
+        const { senderEmail, receiverEmail } = req.body;
 
-    // delete: for friend-request cancel
-    app.delete("/friend-request/cancel", async(req, res) => {
+        const sender = await userCollections.findOne({ email: senderEmail });
+        const receiver = await userCollections.findOne({ email: receiverEmail });
+
+        if(!sender || !receiver) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        const result = await FriendRequestCollections.updateOne(
+          {
+            senderId: sender._id,
+            receiverId: receiver._id,
+            status: "pending",
+          },
+          {
+            $set: { status: "accepted" },
+          },
+        );
+
+        if(result.modifiedCount === 0) {
+          return res.send({ message: "No pending request found" });
+        }
+
+        res.send({
+          message: "Friend request accepted",
+          status: "accepted",
+        });
+      } catch (err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+
+    // PATCH: for user reject friend request
+    app.patch("/friend-request/rejected", async (req, res) => {
       try{
         const { senderEmail, receiverEmail } = req.body;
 
         const sender = await userCollections.findOne({ email: senderEmail });
-        const receiver = await userCollections.findOne({email: receiverEmail});
+        const receiver = await userCollections.findOne({ email: receiverEmail });
+
+        if (!sender || !receiver) {
+          return res.status(404).send({ message: "User not found" });
+        }
+        
+        const result = await FriendRequestCollections.deleteOne(
+          {
+            senderId: sender._id,
+            receiverId: receiver._id,
+            status: "pending",
+          }
+        );
+
+        res.send({
+          message: "Friend request accepted",
+          status: "none",
+        });
+      }
+      catch(err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+    // delete: for friend-request cancel
+    app.delete("/friend-request/cancel", async (req, res) => {
+      try {
+        const { senderEmail, receiverEmail } = req.body;
+
+        const sender = await userCollections.findOne({ email: senderEmail });
+        const receiver = await userCollections.findOne({
+          email: receiverEmail,
+        });
 
         if (!sender || !receiver) {
           return res.status(404).send({ message: "User not found" });
@@ -597,11 +668,10 @@ async function run() {
           message: "Request cancelled",
           status: "none",
         });
-      }
-      catch (err) {
+      } catch (err) {
         res.status(500).send({ message: "Internal server error" });
       }
-    })
+    });
 
     /* Friend Request's API's end */
 
