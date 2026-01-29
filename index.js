@@ -526,6 +526,35 @@ async function run() {
       }
     });
 
+
+    // GET: for how many friend-request accepted a singleUser
+    app.get("/friends/accepted-request", async (req, res) => {
+      try{
+        const { email } = req.query;
+
+        if (!email) {
+          return res.status(400).send({ message: "email is required" });
+        }
+
+        const user = await userCollections.findOne({ email });
+        if(!user) {
+          return res.status(400).send({ message: "user not define" })
+        };
+
+        const result = await FriendRequestCollections.find({
+          $and: [
+            { status: "accepted" },
+            { $or: [{ senderId: user._id }, { receiverId: user._id }] }
+          ]
+        }).sort({ createdAt: -1 }).toArray()
+
+        res.send(result);
+      }
+      catch (err) {
+        res.status(500).send({ message: "Internal server error" });
+      }
+    }) 
+
     // POST: for send friend request
     app.post("/friend-request/send", async (req, res) => {
       try {
