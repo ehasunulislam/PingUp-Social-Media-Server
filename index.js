@@ -44,21 +44,17 @@ async function run() {
     //  GET: For taking all the Stories
     app.get("/all-stories", async (req, res) => {
       try {
-        const story = await storyCollections
-          .find()
-          .sort({ createdAt: -1 })
-          .toArray();
+        const story = await storyCollections.find().sort({ createdAt: -1 }).toArray();
         res.send(story);
       } catch (err) {
-        res
-          .status(500)
-          .send({ message: "Failed to fetch stories", error: err.message });
+        res.status(500).send({ message: "Failed to fetch stories", error: err.message });
       }
     });
 
     //  POST: Create a new story with Image
     app.post("/stories/upload", async (req, res) => {
       const { email, dayPic } = req.body;
+
       if (!email || !dayPic) {
         return res
           .status(400)
@@ -86,6 +82,7 @@ async function run() {
     });
     /* story API's end */
 
+    
     /* user's APIs start */
     // ------------- GET: for Single user information with ID -------------
     app.get("/user/:id", async (req, res) => {
@@ -126,19 +123,102 @@ async function run() {
     });
 
     // ------------- POST: for user create -------------
-    app.post("/user", async (req, res) => {
-      const user = req.body;
-      const email = req.body.email;
-      const query = { email: email };
-      const existingUser = await userCollections.findOne(query);
+    // app.post("/user", async (req, res) => {
+    //   const user = req.body;
+    //   const email = req.body.email;
+    //   const query = { email: email };
+    //   const existingUser = await userCollections.findOne(query);
 
-      if (existingUser) {
-        return res.send({ message: "User already exists" });
-      } else {
-        const result = await userCollections.insertOne(user);
-        res.send(result);
-      }
+    //   if (existingUser) {
+    //     return res.send({ message: "User already exists" });
+    //   } else {
+    //     const result = await userCollections.insertOne(user);
+    //     res.send(result);
+    //   }
+    // });
+
+    // ------------- POST: for user create with (name, email, password) -------------
+    app.post("/user-create", upload.single("image"), async(req, res) => {
+      try{
+        const { uid, name, email } = req.body;
+
+        // check existingUser
+        const existingUser = await userCollections.findOne({ email });
+        if(existingUser) {
+          return res.status(400).send({message: "user already exist"});
+        }
+
+
+        // upload image to  cloudinary
+        const uploadResult = await cloudinary.uploader.upload(
+          `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`,
+          {
+            folder: "pingUP_users"
+          }
+        );
+
+        // save user to db
+        const userData = {
+          uid,
+          name, 
+          email,
+          img:  uploadResult.secure_url,
+          role: "user",
+          status: "approved",
+          createdAt: new Date()
+        };
+
+        await userCollections.insertOne(userData);
+
+        res.send({
+          success: true,
+          imageUrl: uploadResult.secure_url
+        })
+       }
+      catch (error) {
+      res.status(500).send({
+        success: false,
+        message: error.message,
+      });
+    }
     });
+
+  // ------------- POST: for user create with ( Google ) -------------
+    app.post("/user-create-google", async (req, res) => {
+    try {
+      const { uid, name, email, img } = req.body;
+
+      const existingUser = await userCollections.findOne({ email });
+      if (existingUser) {
+        return res.send({ success: true, message: "User already exists" });
+      }
+
+      const userData = {
+        uid,
+        name,
+        email,
+        img,
+        role: "user",
+        status: "approved",
+        createdAt: new Date(),
+      };
+
+      const result = await userCollections.insertOne(userData);
+
+      res.send({
+        success: true,
+        insertedId: result.insertedId,
+      });
+    } 
+    catch (error) {
+      res.status(500).send({
+        success: false,
+        message: error.message,
+      });
+    }
+    });
+
+
 
     // ------------- PATCH: for user update -------------
     app.patch("/update-user", async (req, res) => {
